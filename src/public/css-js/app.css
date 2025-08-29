@@ -1,0 +1,14 @@
+html,
+body {
+    font-size: 1rem;
+    font-family: system-ui, -apple-system, "Segoe UI";
+    background-color: #f1f1f1;
+}
+
+.container {
+    max-width: 1024px;
+}
+
+.logo {
+    height: 25px;
+}

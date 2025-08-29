@@ -1,0 +1,15 @@
+name: simple-invoice-app
+
+services:
+    webapp:
+        build: .
+        image: simple-invoice-app/webapp
+        container_name: simple-invoice-app
+        ports:
+            - "8082:80"
+        restart: always
+        tty: true
+        environment:
+            - ID=aaaa-bbbb-cccc-eeeeee
+        volumes:
+            - ./src:/app/src
