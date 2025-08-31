@@ -24,7 +24,7 @@ app.mount("/public", StaticFiles(directory="public/"), name="public")
 env = Environment(loader=FileSystemLoader(["app/html/"]))
 
 
-@app.get('/{_:path}')
+@app.get("/{_:path}")
 def home(request: Request):
     return HTMLResponse(
         status_code=status.HTTP_200_OK,

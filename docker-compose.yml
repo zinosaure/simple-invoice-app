@@ -6,8 +6,8 @@ services:
         image: simple-invoice-app/webapp
         container_name: simple-invoice-app
         ports:
-            - "8082:80"
-        restart: always
+            - "8086:80"
+        restart: unless-stopped
         tty: true
         environment:
             - ID=aaaa-bbbb-cccc-eeeeee

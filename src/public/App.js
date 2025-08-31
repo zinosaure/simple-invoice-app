@@ -120,10 +120,10 @@ const recipients = [
     },
 ];
 
-function load_id(id, stack) {
-    for (const i in stack)
-        if (stack[i].id == id)
-            return stack[i];
+function load_id(id, items) {
+    for (const i in items)
+        if (items[i].id == id)
+            return items[i];
 
     return {};
 }

@@ -8,6 +8,7 @@ RUN pip install requests
 RUN pip install fastapi
 RUN pip install jinja2
 RUN pip install uvicorn[standard]
+RUN pip install git+https://github.com/zinosaure/flex-polars.git@main
 
 COPY ./src /app/src
 WORKDIR /app/src
