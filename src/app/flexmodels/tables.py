@@ -1,14 +1,14 @@
-from typing import Any, Optional, cast
-from flex import Flex
+from typing import Any
+from flex import Flexmeta, Flexobject, Flexselect, pl
 from datetime import date
 from enum import Enum
 
 
-class Table(Flex.Flextable):
+class Table(Flexobject):
     pass
 
 
-class Contact:
+class Contact(Table):
     def __init__(self):
         self.phone: str = ""
         self.cellphone: str = ""
@@ -22,60 +22,52 @@ class Contact:
 
 
 class Provider(Table):
+    flexmeta: Flexmeta = Flexmeta("providers", schema={"contact": pl.Object})
+
     def __init__(self):
-        super().__init__(Flex.Flexmeta("providers", 1000))
+        super().__init__()
         self.name: str = "???"
         self.siren: str = ""
         self.contact: Contact = Contact()
 
-    @staticmethod
-    def load(id: int) -> Optional["Provider"]:
-        return cast(Provider, Flex.Flextable._load(Provider(), id))
-
 
 class Recipient(Table):
+    flexmeta: Flexmeta = Flexmeta("recipients", schema={"contact": pl.Object})
+
     def __init__(self):
-        super().__init__(Flex.Flexmeta("recipients", 1000))
+        super().__init__()
         self.contract: str = ""
         self.name: str = "???"
         self.siren: str = ""
         self.contact: Contact = Contact()
 
-    @staticmethod
-    def load(id: int) -> Optional["Recipient"]:
-        return cast(Recipient, Flex.Flextable._load(Recipient(), id))
-
 
 class IBAN(Table):
+    flexmeta: Flexmeta = Flexmeta("ibans")
+
     def __init__(self):
-        super().__init__(Flex.Flexmeta("ibans", 1000))
+        super().__init__()
         self.label: str = "???"
         self.account_number: str = "FR76 ???? ???? ???? ???? ????"
         self.bic_swift: str = "???"
 
-    @staticmethod
-    def load(id: int) -> Optional["IBAN"]:
-        return cast(IBAN, Flex.Flextable._load(IBAN(), id))
-
 
 class Product(Table):
+    flexmeta: Flexmeta = Flexmeta("products", schema={"price_unit_ht": pl.Float32})
+
     def __init__(self):
-        super().__init__(
-            Flex.Flexmeta("products", 1000, {"price_unit_ht": Flex.Pl.Float32})
-        )
+        super().__init__()
         self.label: str = "???"
         self.description: str = "???"
         self.price_unit_ht: float = 0.0
         self.tax_rate: float = 0.0
 
-    @staticmethod
-    def load(id: int) -> Optional["Product"]:
-        return cast(Product, Flex.Flextable._load(Product(), id))
-
 
 class Invoice(Table):
+    flexmeta: Flexmeta = Flexmeta("invoices")
+
     def __init__(self):
-        super().__init__(Flex.Flexmeta("invoices", 0))
+        super().__init__()
         self.type: str = Invoice.Type.INVOICE.value
         self.status: str = Invoice.Status.DRAFT.value
         self.paiment_status: str = Invoice.PaimentStatus.PENDING.value
@@ -96,27 +88,35 @@ class Invoice(Table):
             "art. 293B du CGI."
         )
 
-    @staticmethod
-    def load(id: int) -> Optional["Invoice"]:
-        return cast(Invoice, Flex.Flextable._load(Invoice(), id))
+    def set_items(self, items: list["Invoice.Item"]):
+        self.items = items
 
-    def on_compose(self, name: str, value: Any) -> Any:
-        if value and name in ["date", "paiment_date"] and isinstance(value, str):
-            return date(*[int(v) for v in value.split("-")])
+    def update(self, item: dict[str, Any]) -> "Flexobject":
+        super().update(item)
 
-        if value and name == "items" and isinstance(value, list):
-            return [Invoice.Item.to_object(item) for item in value]
+        for name, value in self.__dict__.items():
+            if value and name in ["date", "paiment_date"] and isinstance(value, str):
+                self.__setitem__(name, date(*[int(v) for v in value.split("-")]))
 
-        return value
+            if name == "items" and isinstance(value, list):
+                self.__dict__[name] = []
 
-    def on_decompose(self, name: str, value: Any) -> Any:
-        if value and name in ["date", "paiment_date"] and isinstance(value, date):
-            return str(value)
+                for i, v in enumerate(value):
+                    self.__dict__[name].append(Invoice.Item.clone(v))
 
-        if value and name == "items" and isinstance(value, list):
-            return [item.to_dict() for item in value]
+        return self
 
-        return super().on_decompose(name, value)
+    def takeout(self, extract_all: bool = True) -> dict[str, Any]:
+        items = super().takeout(extract_all)
+
+        for name, value in items.items():
+            if value and name in ["date", "paiment_date"] and isinstance(value, date):
+                items[name] = str(value)
+
+            if name == "items" and isinstance(value, list):
+                items[name] = [v.takeout() for v in value]
+
+        return items
 
     class SelfEnum(str, Enum):
         pass
@@ -143,27 +143,9 @@ class Invoice(Table):
         CHEQUE = "Chèque"
         BANK_TRANSFER = "Virement bancaire"
 
-    class Item:
+    class Item(Table):
         def __init__(self):
             self.quantity: int = 0
             self.product: Product = Product()
             self.tax_rate: float = self.product.tax_rate
             self.total_price_ht: float = 0.0
-
-        @staticmethod
-        def to_object(data: dict[str, Any]) -> "Invoice.Item":
-            item = Invoice.Item()
-            item.quantity = data.get("quantity", 0)
-            item.tax_rate = data.get("tax_rate", 0.0)
-            item.total_price_ht = data.get("total_price_ht", 0.0)
-            item.product = cast(Product, Product().clone(data.get("product", {})))
-
-            return item
-
-        def to_dict(self) -> dict[str, Any]:
-            return {
-                "quantity": self.quantity,
-                "product": self.product.to_dict(),
-                "tax_rate": self.tax_rate,
-                "total_price_ht": self.total_price_ht,
-            }
